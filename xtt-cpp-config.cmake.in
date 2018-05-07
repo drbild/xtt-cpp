@@ -1,0 +1,36 @@
+get_filename_component(xtt_cpp_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+################################################################################
+# Find dependencies
+################################################################################
+include(CMakeFindDependencyMacro)
+list(APPEND CMAKE_MODULE_PATH ${xtt_cpp_CMAKE_DIR})
+
+find_dependency(xtt 0.6.0)
+
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+################################################################################
+# Include xtt-cpp targets
+################################################################################
+if(NOT TARGET xtt::xtt-cpp)
+    include("${xtt_cpp_CMAKE_DIR}/xtt-cpp-targets.cmake")
+endif()
+
+set(xtt_cpp_LIBRARIES xtt::xtt-cpp xtt::xtt-asio)
+
+################################################################################
+# Verify that required components were included in build
+################################################################################
+if(xtt_cpp_FIND_COMPONENTS)
+  foreach(comp ${xtt_cpp_FIND_COMPONENTS})
+    if(comp STREQUAL "asio")
+      set(xtt_cpp_asio_FOUND 1)
+    else()
+      set(xtt_cpp_${comp}_FOUND 0)
+      if(xtt_cpp_FIND_REQUIRED_${comp})
+        message(FATAL_ERROR "xtt::${comp} not available.")
+      endif()
+    endif()
+  endforeach()
+endif()
