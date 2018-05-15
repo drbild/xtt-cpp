@@ -43,8 +43,8 @@ namespace xtt {
     class server_handshake_context {
     public:
         struct io_buffer {
-            unsigned char* io_ptr;
-            uint16_t io_bytes_requested;
+            unsigned char* ptr;
+            uint16_t len;
         };
 
     public:

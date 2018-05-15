@@ -151,8 +151,8 @@ return_code server_handshake_context::handle_io(uint16_t bytes_written,
 {
     xtt_return_code_type ret = xtt_handshake_server_handle_io(bytes_written,
                                                               bytes_read,
-                                                              &io_buf.io_bytes_requested,
-                                                              &io_buf.io_ptr,
+                                                              &io_buf.len,
+                                                              &io_buf.ptr,
                                                               &handshake_ctx_);
 
     return static_cast<return_code>(ret);
@@ -160,8 +160,8 @@ return_code server_handshake_context::handle_io(uint16_t bytes_written,
 
 return_code server_handshake_context::handle_connect(io_buffer& io_buf)
 {
-    xtt_return_code_type ret = xtt_handshake_server_handle_connect(&io_buf.io_bytes_requested,
-                                                                   &io_buf.io_ptr,
+    xtt_return_code_type ret = xtt_handshake_server_handle_connect(&io_buf.len,
+                                                                   &io_buf.ptr,
                                                                    &handshake_ctx_);
     return static_cast<return_code>(ret);
 }
@@ -170,8 +170,8 @@ return_code server_handshake_context::build_serverattest(io_buffer& io_buf,
                                                          const server_certificate_context& certificate_ctx,
                                                          server_cookie_context& cookie_ctx)
 {
-    xtt_return_code_type ret = xtt_handshake_server_build_serverattest(&io_buf.io_bytes_requested,
-                                                                       &io_buf.io_ptr,
+    xtt_return_code_type ret = xtt_handshake_server_build_serverattest(&io_buf.len,
+                                                                       &io_buf.ptr,
                                                                        &handshake_ctx_,
                                                                        certificate_ctx.get(),
                                                                        cookie_ctx.get());
@@ -184,8 +184,8 @@ return_code server_handshake_context::preparse_idclientattest(io_buffer& io_buf,
                                                               server_cookie_context& cookie_ctx,
                                                               const server_certificate_context& certificate_ctx)
 {
-    xtt_return_code_type ret = xtt_handshake_server_preparse_idclientattest(&io_buf.io_bytes_requested,
-                                                                            &io_buf.io_ptr,
+    xtt_return_code_type ret = xtt_handshake_server_preparse_idclientattest(&io_buf.len,
+                                                                            &io_buf.ptr,
                                                                             requested_client_id_out.get(),
                                                                             claimed_group_id_out.get(),
                                                                             cookie_ctx.get(),
@@ -198,8 +198,8 @@ return_code server_handshake_context::verify_groupsignature(io_buffer& io_buf,
                                                             group_public_key_context& group_pub_key_ctx,
                                                             const server_certificate_context& certificate_ctx)
 {
-xtt_return_code_type ret = xtt_handshake_server_verify_groupsignature(&io_buf.io_bytes_requested,
-                                                                      &io_buf.io_ptr,
+xtt_return_code_type ret = xtt_handshake_server_verify_groupsignature(&io_buf.len,
+                                                                      &io_buf.ptr,
                                                                       group_pub_key_ctx.get(),
                                                                       certificate_ctx.get(),
                                                                       &handshake_ctx_);
@@ -209,8 +209,8 @@ xtt_return_code_type ret = xtt_handshake_server_verify_groupsignature(&io_buf.io
 return_code server_handshake_context::build_idserverfinished(io_buffer& io_buf,
                                                              const identity& client_id)
 {
-    xtt_return_code_type ret = xtt_handshake_server_build_idserverfinished(&io_buf.io_bytes_requested,
-                                                                           &io_buf.io_ptr,
+    xtt_return_code_type ret = xtt_handshake_server_build_idserverfinished(&io_buf.len,
+                                                                           &io_buf.ptr,
                                                                            client_id.get(),
                                                                            &handshake_ctx_);
     return static_cast<return_code>(ret);
@@ -218,7 +218,7 @@ return_code server_handshake_context::build_idserverfinished(io_buffer& io_buf,
 
 return_code server_handshake_context::build_error_msg(io_buffer& io_buf)
 {
-    return static_cast<return_code>(xtt_server_build_error_msg(&io_buf.io_bytes_requested, &io_buf.io_ptr, &handshake_ctx_));
+    return static_cast<return_code>(xtt_server_build_error_msg(&io_buf.len, &io_buf.ptr, &handshake_ctx_));
 }
 
 void swap(server_handshake_context& first, server_handshake_context& second)

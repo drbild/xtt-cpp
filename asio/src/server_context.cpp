@@ -26,6 +26,7 @@ server_context::server_context(boost::asio::ip::tcp::socket tcp_socket,
                                server_cookie_context& cookie_ctx)
     : in_buffer_(),
       out_buffer_(),
+      io_buf_(),
       handshake_ctx_(in_buffer_.data(), in_buffer_.size(), out_buffer_.data(), out_buffer_.size()),
       socket_(std::move(tcp_socket)),
       strand_(socket_.get_io_service()),

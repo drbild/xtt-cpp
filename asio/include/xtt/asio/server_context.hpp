@@ -58,22 +58,22 @@ namespace asio {
          * Begin the server's end of an XTT handshake, from the very first client message.
          *
          * `async_handle_connect` WILL NOT invoke
-         * `async_lookup_gpk_callback`, `async_assign_id_callback`, or `handler` directly.
+         * `async_lookup_gpk`, `async_assign_id`, or `handler` directly.
          * Instead, it will invoke them in a manner equivalent to using
          * `boost::asio:io_context::post()`.
          *
          * Parameters:
-         * - `async_lookup_gpk_callback` must have the signature:
+         * - `async_lookup_gpk` must have the signature:
          *      template <typename Continuation>
          *      void async_lookup_gpk(group_identity claimed_gid, identity requested_id, Continuation continuation);
-         *   -  Further, `async_lookup_gpk_callback` MUST NOT call `continuation` itself.
+         *   -  Further, `async_lookup_gpk` MUST NOT call `continuation` itself.
          *      Instead, it must invoke the continuation in a manner equivalent to using
          *      `boost::asio:io_context::post()`.
          *
-         * - `async_assign_id_callback` must have the signature:
+         * - `async_assign_id` must have the signature:
          *      template <typename Continuation>
          *      void async_assign_id(group_identity claimed_gid, identity requested_id, Continuation continuation);
-         *   -  Further, `async_assign_id_callback` MUST NOT call continuation itself.
+         *   -  Further, `async_assign_id` MUST NOT call continuation itself.
          *      Instead, it must invoke the continuation in a manner equivalent to using
          *      `boost::asio:io_context::post()`.
          *
@@ -83,8 +83,8 @@ namespace asio {
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
-        void async_handle_connect(GPKLookupCallback async_lookup_gpk_callback,
-                                  AssignIdCallback async_assign_id_callback,
+        void async_handle_connect(GPKLookupCallback async_lookup_gpk,
+                                  AssignIdCallback async_assign_id,
                                   Handler handler);
 
     private:
@@ -93,43 +93,40 @@ namespace asio {
                   typename Handler>
         void
         async_run_state_machine(return_code current_rc,
-                                server_handshake_context::io_buffer io_buf,
-                                GPKLookupCallback async_lookup_gpk_callback,
-                                AssignIdCallback async_assign_id_callback,
+                                GPKLookupCallback async_lookup_gpk,
+                                AssignIdCallback async_assign_id,
                                 Handler handler);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_do_read(server_handshake_context::io_buffer io_buf,
-                      GPKLookupCallback async_lookup_gpk_callback,
-                      AssignIdCallback async_assign_id_callback,
+        async_do_read(GPKLookupCallback async_lookup_gpk,
+                      AssignIdCallback async_assign_id,
                       Handler handler);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_do_write(server_handshake_context::io_buffer io_buf,
-                       GPKLookupCallback async_lookup_gpk_callback,
-                       AssignIdCallback async_assign_id_callback,
+        async_do_write(GPKLookupCallback async_lookup_gpk,
+                       AssignIdCallback async_assign_id,
                        Handler handler);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_buildserverattest(GPKLookupCallback async_lookup_gpk_callback,
-                                AssignIdCallback async_assign_id_callback,
+        async_buildserverattest(GPKLookupCallback async_lookup_gpk,
+                                AssignIdCallback async_assign_id,
                                 Handler handler);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_preparseidclientattest(GPKLookupCallback async_lookup_gpk_callback,
-                                     AssignIdCallback async_assign_id_callback,
+        async_preparseidclientattest(GPKLookupCallback async_lookup_gpk,
+                                     AssignIdCallback async_assign_id,
                                      Handler handler);
 
         template <typename GPKLookupCallback,
@@ -138,8 +135,8 @@ namespace asio {
         void
         async_found_gpk_callback(boost::system::error_code ec,
                                  std::unique_ptr<group_public_key_context> gpk_ctx,
-                                 GPKLookupCallback async_lookup_gpk_callback,
-                                 AssignIdCallback async_assign_id_callback,
+                                 GPKLookupCallback async_lookup_gpk,
+                                 AssignIdCallback async_assign_id,
                                  Handler handler);
 
         template <typename GPKLookupCallback,
@@ -148,24 +145,24 @@ namespace asio {
         void
         async_assigned_id_callback(boost::system::error_code ec,
                                    identity assigned_id,
-                                   GPKLookupCallback async_lookup_gpk_callback,
-                                   AssignIdCallback async_assign_id_callback,
+                                   GPKLookupCallback async_lookup_gpk,
+                                   AssignIdCallback async_assign_id,
                                    Handler handler);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_verifygroupsignature(GPKLookupCallback async_lookup_gpk_callback,
-                                   AssignIdCallback async_assign_id_callback,
+        async_verifygroupsignature(GPKLookupCallback async_lookup_gpk,
+                                   AssignIdCallback async_assign_id,
                                    Handler handler);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_buildidserverfinished(GPKLookupCallback async_lookup_gpk_callback,
-                                    AssignIdCallback async_assign_id_callback,
+        async_buildidserverfinished(GPKLookupCallback async_lookup_gpk,
+                                    AssignIdCallback async_assign_id,
                                     Handler handler);
 
         template <typename Handler>
@@ -179,6 +176,7 @@ namespace asio {
     private:
         std::array<unsigned char, MAX_HANDSHAKE_CLIENT_MESSAGE_LENGTH> in_buffer_;
         std::array<unsigned char, MAX_HANDSHAKE_SERVER_MESSAGE_LENGTH> out_buffer_;
+        server_handshake_context::io_buffer io_buf_;
         server_handshake_context handshake_ctx_;
 
         boost::asio::ip::tcp::socket socket_;
