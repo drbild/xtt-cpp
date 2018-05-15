@@ -47,10 +47,6 @@ brew install xtt-cpp xtt-asio
 * A C99-compliant compiler
 
 * [XTT](https://github.com/xaptum/xtt) (version 0.6.0 or higher)
-* [ECDAA](https://github.com/xaptum/ecdaa) (version 0.9.0 or higher)
-* [libsodium](https://github.com/jedisct1/libsodium) (version 1.0.11 or higher)
-* [xaptum-tpm](https://github.com/xaptum/xaptum-tpm) (version 0.5.0 or higher)
-  * If building XTT with TPM support
 
 ### Building the Library
 
