@@ -3,10 +3,10 @@
 This project provides two C++ APIs for the C-based XTT
 reference implementation [here](https://github.com/xaptum/xtt):
 - `libxtt-cpp`:
-  - A mostly-one-to-one C++ version of the C API provided by [here](https://github.com/xaptum/xtt)
+  - A mostly-one-to-one C++ version of the C API provided [here](https://github.com/xaptum/xtt)
 - `libxtt-asio`:
   - A higher-level API that builds upon `libxtt-cpp` and uses the [Boost ASIO](https://www.boost.org/doc/libs/1_67_0/doc/html/boost_asio.html)
-    perform all necessary network I/O asynchronously
+    library to perform all necessary network I/O asynchronously
 
 # Project Status
 [![Build Status](https://travis-ci.org/xaptum/xtt-cpp.svg?branch=master)](https://travis-ci.org/xaptum/xtt-cpp)
@@ -44,8 +44,8 @@ brew install xtt-cpp xtt-asio
 ### Build Dependencies
 
 * CMake (version 3.0 or higher)
-* A C99-compliant compiler
-
+* A C++14-compliant compiler
+* boost ASIO (version 1.66 or higher)
 * [XTT](https://github.com/xaptum/xtt) (version 0.6.0 or higher)
 
 ### Building the Library
@@ -97,7 +97,7 @@ TODO: Add simple client and server source code
 
 ### Example Programs
 If the `-DBUILD_EXAMPLES=ON` CMake option is used during building,
-example client and server executables will be built and placed
+an example server executable will be built and placed
 in the `${CMAKE_BINARY_DIR}/bin` directory.
 Example configuration data is also provided in the `examples/data`
 directory.
