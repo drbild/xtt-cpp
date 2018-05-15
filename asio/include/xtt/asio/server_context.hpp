@@ -33,6 +33,7 @@
 #include <memory>
 #include <unordered_map>
 #include <functional>
+#include <tuple>
 
 namespace xtt {
 namespace asio {
@@ -93,41 +94,31 @@ namespace asio {
                   typename Handler>
         void
         async_run_state_machine(return_code current_rc,
-                                GPKLookupCallback async_lookup_gpk,
-                                AssignIdCallback async_assign_id,
-                                Handler handler);
+                                std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_do_read(GPKLookupCallback async_lookup_gpk,
-                      AssignIdCallback async_assign_id,
-                      Handler handler);
+        async_do_read(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_do_write(GPKLookupCallback async_lookup_gpk,
-                       AssignIdCallback async_assign_id,
-                       Handler handler);
+        async_do_write(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_buildserverattest(GPKLookupCallback async_lookup_gpk,
-                                AssignIdCallback async_assign_id,
-                                Handler handler);
+        async_buildserverattest(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_preparseidclientattest(GPKLookupCallback async_lookup_gpk,
-                                     AssignIdCallback async_assign_id,
-                                     Handler handler);
+        async_preparseidclientattest(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
@@ -135,9 +126,7 @@ namespace asio {
         void
         async_found_gpk_callback(boost::system::error_code ec,
                                  std::unique_ptr<group_public_key_context> gpk_ctx,
-                                 GPKLookupCallback async_lookup_gpk,
-                                 AssignIdCallback async_assign_id,
-                                 Handler handler);
+                                 std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
@@ -145,33 +134,30 @@ namespace asio {
         void
         async_assigned_id_callback(boost::system::error_code ec,
                                    identity assigned_id,
-                                   GPKLookupCallback async_lookup_gpk,
-                                   AssignIdCallback async_assign_id,
-                                   Handler handler);
+                                   std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_verifygroupsignature(GPKLookupCallback async_lookup_gpk,
-                                   AssignIdCallback async_assign_id,
-                                   Handler handler);
+        async_verifygroupsignature(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
         template <typename GPKLookupCallback,
                   typename AssignIdCallback,
                   typename Handler>
         void
-        async_buildidserverfinished(GPKLookupCallback async_lookup_gpk,
-                                    AssignIdCallback async_assign_id,
-                                    Handler handler);
+        async_buildidserverfinished(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
-        template <typename Handler>
+        template <typename GPKLookupCallback,
+                  typename AssignIdCallback,
+                  typename Handler>
         void
-        async_send_error_msg(Handler handler);
+        async_send_error_msg(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack);
 
-    private:
-        template <typename Handler>
-        bool set_cert(Handler handler);
+        template <typename GPKLookupCallback,
+                  typename AssignIdCallback,
+                  typename Handler>
+        bool set_cert(std::tuple<GPKLookupCallback, AssignIdCallback, Handler>& func_pack);
 
     private:
         std::array<unsigned char, MAX_HANDSHAKE_CLIENT_MESSAGE_LENGTH> in_buffer_;

@@ -25,19 +25,17 @@ namespace asio {
               typename AssignIdCallback,
               typename Handler>
     void
-    server_context::async_do_read(GPKLookupCallback async_lookup_gpk,
-                                  AssignIdCallback async_assign_id,
-                                  Handler handler)
+    server_context::async_do_read(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
         boost::asio::async_read(socket_,
                                 boost::asio::buffer(io_buf_.ptr,
                                                     io_buf_.len),
                                 boost::asio::bind_executor(strand_,
-                                                           [this, async_lookup_gpk, async_assign_id, handler]
+                                                           [this, func_pack(std::move(func_pack))]
                                                            (auto&& ec, auto&& bytes_transferred)
                                                            {
                                                                if (ec) {
-                                                                   handler(ec);
+                                                                   std::get<2>(func_pack)(ec);
                                                                    return;
                                                                }
 
@@ -46,9 +44,7 @@ namespace asio {
                                                                                                                  io_buf_);
 
                                                                this->async_run_state_machine(current_rc,
-                                                                                             async_lookup_gpk,
-                                                                                             async_assign_id,
-                                                                                             handler);
+                                                                                             std::move(func_pack));
                                                            }));
     }
 
@@ -56,19 +52,17 @@ namespace asio {
               typename AssignIdCallback,
               typename Handler>
     void
-    server_context::async_do_write(GPKLookupCallback async_lookup_gpk,
-                                   AssignIdCallback async_assign_id,
-                                   Handler handler)
+    server_context::async_do_write(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
         boost::asio::async_write(socket_,
                                  boost::asio::buffer(io_buf_.ptr,
                                                      io_buf_.len),
                                  boost::asio::bind_executor(strand_,
-                                                            [this, async_lookup_gpk, async_assign_id, handler]
+                                                            [this, func_pack(std::move(func_pack))]
                                                             (auto&& ec, auto&& bytes_transferred)
                                                             {
                                                                 if (ec) {
-                                                                    handler(ec);
+                                                                    std::get<2>(func_pack)(ec);
                                                                     return;
                                                                 }
 
@@ -77,26 +71,25 @@ namespace asio {
                                                                                                                   io_buf_);
 
                                                                 this->async_run_state_machine(current_rc,
-                                                                                              async_lookup_gpk,
-                                                                                              async_assign_id,
-                                                                                              handler);
+                                                                                              std::move(func_pack));
                                                             }));
     }
 
-    template <typename Handler>
-    bool server_context::set_cert(Handler handler)
+    template <typename GPKLookupCallback,
+              typename AssignIdCallback,
+              typename Handler>
+    bool server_context::set_cert(std::tuple<GPKLookupCallback, AssignIdCallback, Handler>& func_pack)
     {
+        // Take func_pack by reference, because this function is synchronous
+
         if (cert_ != cert_map_.end())
             return true;
 
         auto suite_spec = handshake_ctx_.get_suite_spec();
         if (!suite_spec) {
-            async_send_error_msg([this, handler]()
-                                 {
-                                     this->ec_ = boost::system::error_code(static_cast<int>(return_code::UNKNOWN_SUITE_SPEC),
-                                                                                            get_xtt_category());
-                                     handler(this->ec_);
-                                 });
+            this->ec_ = boost::system::error_code(static_cast<int>(return_code::UNKNOWN_SUITE_SPEC),
+                                                                   get_xtt_category());
+            async_send_error_msg(std::move(func_pack));
             return false;
         }
 
@@ -106,12 +99,9 @@ namespace asio {
 
             return true;
         } else {
-            async_send_error_msg([this, handler]()
-                                 {
-                                     this->ec_ = boost::system::error_code(static_cast<int>(return_code::BAD_CERTIFICATE),
-                                                                           get_xtt_category());
-                                     handler(this->ec_);
-                                 });
+            this->ec_ = boost::system::error_code(static_cast<int>(return_code::BAD_CERTIFICATE),
+                                                  get_xtt_category());
+            async_send_error_msg(std::move(func_pack));
             return false;
         }
     }
@@ -120,11 +110,9 @@ namespace asio {
               typename AssignIdCallback,
               typename Handler>
     void
-    server_context::async_buildserverattest(GPKLookupCallback async_lookup_gpk,
-                                            AssignIdCallback async_assign_id,
-                                            Handler handler)
+    server_context::async_buildserverattest(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
-        if (!set_cert(handler)) {
+        if (!set_cert(func_pack)) {
             return; // set_cert takes care of raising the callback
         }
 
@@ -133,20 +121,16 @@ namespace asio {
                                                                cookie_ctx_);
 
         async_run_state_machine(new_rc,
-                                async_lookup_gpk,
-                                async_assign_id,
-                                handler);
+                                std::move(func_pack));
     }
 
     template <typename GPKLookupCallback,
               typename AssignIdCallback,
               typename Handler>
     void
-    server_context::async_preparseidclientattest(GPKLookupCallback async_lookup_gpk,
-                                                 AssignIdCallback async_assign_id,
-                                                 Handler handler)
+    server_context::async_preparseidclientattest(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
-        if (!set_cert(handler)) {
+        if (!set_cert(func_pack)) {
             return; // set_cert takes care of raising the callback
         }
 
@@ -157,9 +141,7 @@ namespace asio {
                                                                     *cert_->second);
 
         async_run_state_machine(new_rc,
-                                async_lookup_gpk,
-                                async_assign_id,
-                                handler);
+                                std::move(func_pack));
     }
 
     template <typename GPKLookupCallback,
@@ -168,20 +150,15 @@ namespace asio {
     void
     server_context::async_found_gpk_callback(boost::system::error_code ec,
                                              std::unique_ptr<group_public_key_context> gpk_ctx,
-                                             GPKLookupCallback async_lookup_gpk,
-                                             AssignIdCallback async_assign_id,
-                                             Handler handler)
+                                             std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
         if (ec) {
-            async_send_error_msg([this, ec, handler]()
-                                 {
-                                     handler(ec);
-                                     return;
-                                 });
+            ec_ = ec;
+            async_send_error_msg(std::move(func_pack));
             return;
         }
 
-        if (!set_cert(handler)) {
+        if (!set_cert(func_pack)) {
             return; // set_cert takes care of raising the callback
         }
 
@@ -190,9 +167,7 @@ namespace asio {
                                                                   *cert_->second);
 
         async_run_state_machine(new_rc,
-                                async_lookup_gpk,
-                                async_assign_id,
-                                handler);
+                                std::move(func_pack));
     }
 
     template <typename GPKLookupCallback,
@@ -201,16 +176,11 @@ namespace asio {
     void
     server_context::async_assigned_id_callback(boost::system::error_code ec,
                                                identity assigned_id,
-                                               GPKLookupCallback async_lookup_gpk,
-                                               AssignIdCallback async_assign_id,
-                                               Handler handler)
+                                               std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
         if (ec) {
-            async_send_error_msg([this, ec, handler]()
-                                 {
-                                     handler(ec);
-                                     return;
-                                 });
+            ec_ = ec;
+            async_send_error_msg(std::move(func_pack));
             return;
         }
 
@@ -218,33 +188,27 @@ namespace asio {
                                                                    assigned_id);
 
         async_run_state_machine(new_rc,
-                                async_lookup_gpk,
-                                async_assign_id,
-                                handler);
+                                std::move(func_pack));
     }
 
     template <typename GPKLookupCallback,
               typename AssignIdCallback,
               typename Handler>
     void
-    server_context::async_verifygroupsignature(GPKLookupCallback async_lookup_gpk,
-                                               AssignIdCallback async_assign_id,
-                                               Handler handler)
+    server_context::async_verifygroupsignature(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
         boost::asio::post(strand_,
-                          [this, async_lookup_gpk, async_assign_id, handler]()
+                          [this, func_pack(std::move(func_pack))]()
                           {
-                              async_lookup_gpk(claimed_group_id_,
-                                                        requested_client_id_,
-                                                        [this, async_lookup_gpk, async_assign_id, handler]
-                                                        (auto&& ec, std::unique_ptr<group_public_key_context> gpk_ctx)
-                                                        {
-                                                            this->async_found_gpk_callback(ec,
-                                                                                           std::move(gpk_ctx),
-                                                                                           async_lookup_gpk,
-                                                                                           async_assign_id,
-                                                                                           handler);
-                                                        });
+                              std::get<0>(func_pack)(claimed_group_id_,
+                                                     requested_client_id_,
+                                                     [this, func_pack(std::move(func_pack))]
+                                                     (auto&& ec, std::unique_ptr<group_public_key_context> gpk_ctx)
+                                                     {
+                                                         this->async_found_gpk_callback(ec,
+                                                                                        std::move(gpk_ctx),
+                                                                                        std::move(func_pack));
+                                                     });
                           });
     }
 
@@ -253,24 +217,20 @@ namespace asio {
               typename AssignIdCallback,
               typename Handler>
     void
-    server_context::async_buildidserverfinished(GPKLookupCallback async_lookup_gpk,
-                                                AssignIdCallback async_assign_id,
-                                                Handler handler)
+    server_context::async_buildidserverfinished(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
         boost::asio::post(strand_,
-                          [this, async_lookup_gpk, async_assign_id, handler]()
+                          [this, func_pack(std::move(func_pack))]()
                           {
-                              async_assign_id(claimed_group_id_,
-                                                 requested_client_id_,
-                                                 [this, async_lookup_gpk, async_assign_id, handler]
-                                                 (auto&& ec, identity assigned_id)
-                                                 {
-                                                      this->async_assigned_id_callback(ec,
-                                                                                       assigned_id,
-                                                                                       async_lookup_gpk,
-                                                                                       async_assign_id,
-                                                                                       handler);
-                                                 });
+                              std::get<1>(func_pack)(claimed_group_id_,
+                                                     requested_client_id_,
+                                                     [this, func_pack(std::move(func_pack))]
+                                                     (auto&& ec, identity assigned_id)
+                                                     {
+                                                          this->async_assigned_id_callback(ec,
+                                                                                           assigned_id,
+                                                                                           std::move(func_pack));
+                                                     });
                           });
     }
 
@@ -279,63 +239,58 @@ namespace asio {
               typename Handler>
     void
     server_context::async_run_state_machine(return_code current_rc,
-                                            GPKLookupCallback async_lookup_gpk,
-                                            AssignIdCallback async_assign_id,
-                                            Handler handler)
+                                            std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
         switch (current_rc) {
             case return_code::WANT_WRITE:
-                async_do_write(async_lookup_gpk, async_assign_id, handler);
+                async_do_write(std::move(func_pack));
 
                 break;
             case return_code::WANT_READ:
-                async_do_read(async_lookup_gpk, async_assign_id, handler);
+                async_do_read(std::move(func_pack));
 
                 break;
             case return_code::WANT_BUILDSERVERATTEST:
-                async_buildserverattest(async_lookup_gpk, async_assign_id, handler);
+                async_buildserverattest(std::move(func_pack));
 
                 break;
             case return_code::WANT_PREPARSEIDCLIENTATTEST:
-                async_preparseidclientattest(async_lookup_gpk, async_assign_id, handler);
+                async_preparseidclientattest(std::move(func_pack));
 
                 break;
             case return_code::WANT_VERIFYGROUPSIGNATURE:
-                async_verifygroupsignature(async_lookup_gpk, async_assign_id, handler);
+                async_verifygroupsignature(std::move(func_pack));
 
                 break;
             case return_code::WANT_BUILDIDSERVERFINISHED:
-                async_buildidserverfinished(async_lookup_gpk, async_assign_id, handler);
+                async_buildidserverfinished(std::move(func_pack));
 
                 break;
             case return_code::HANDSHAKE_FINISHED:
-                this->ec_ = boost::system::error_code();
+                ec_ = boost::system::error_code();
 
                 boost::asio::post(strand_,
-                                  [this, handler]()
+                                  [this, func_pack(std::move(func_pack))]()
                                   {
-                                      handler(this->ec_);
+                                      std::get<2>(func_pack)(this->ec_);
                                   });
 
                 break;
             case return_code::RECEIVED_ERROR_MSG:
-                this->ec_ = boost::system::error_code(static_cast<int>(return_code::RECEIVED_ERROR_MSG),
-                                                      get_xtt_category());
+                ec_ = boost::system::error_code(static_cast<int>(return_code::RECEIVED_ERROR_MSG),
+                                                get_xtt_category());
 
                 boost::asio::post(strand_,
-                                  [this, handler]()
+                                  [this, func_pack(std::move(func_pack))]()
                                   {
-                                      handler(this->ec_);
+                                      std::get<2>(func_pack)(this->ec_);
                                   });
                 break;
             default:
-                this->ec_ = boost::system::error_code(static_cast<int>(current_rc),
-                                                      get_xtt_category());
+                ec_ = boost::system::error_code(static_cast<int>(current_rc),
+                                                get_xtt_category());
 
-                async_send_error_msg([this, handler, current_rc]()
-                                     {
-                                         handler(this->ec_);
-                                     });
+                async_send_error_msg(std::move(func_pack));
                 return;
         }
     }
@@ -350,25 +305,27 @@ namespace asio {
     {
         return_code current_rc = handshake_ctx_.handle_connect(io_buf_);
 
-        async_run_state_machine(current_rc,
-                                std::move(async_lookup_gpk),
-                                std::move(async_assign_id),
-                                std::move(handler));
+        auto func_pack = std::make_tuple(std::move(async_lookup_gpk),
+                                         std::move(async_assign_id),
+                                         std::move(handler));
+
+        async_run_state_machine(current_rc, std::move(func_pack));
     }
 
-    template <typename Handler>
+    template <typename GPKLookupCallback,
+              typename AssignIdCallback,
+              typename Handler>
     void
-    server_context::async_send_error_msg(Handler handler)
+    server_context::async_send_error_msg(std::tuple<GPKLookupCallback, AssignIdCallback, Handler> func_pack)
     {
         (void)handshake_ctx_.build_error_msg(io_buf_);
         boost::asio::async_write(socket_,
                                  boost::asio::buffer(io_buf_.ptr,
                                                      io_buf_.len),
                                  boost::asio::bind_executor(strand_,
-                                                            [handler](auto&& /*ec*/, auto&& /*bytes_transferred*/)
+                                                            [this, func_pack(std::move(func_pack))](auto&&, auto&&)
                                                             {
-                                                                // Don't even check ec, just always raise callback
-                                                                handler();
+                                                                std::get<2>(func_pack)(this->ec_);
                                                             }));
     }
 
