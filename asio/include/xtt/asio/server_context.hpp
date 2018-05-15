@@ -43,8 +43,11 @@ namespace asio {
     class server_context {
     public:
         server_context(boost::asio::ip::tcp::socket tcp_socket,
-                       const server_certificate_map& cert_map,
                        server_cookie_context& cookie_ctx);
+
+        void load_certificate(const std::vector<unsigned char>& certificate,
+                              const std::vector<unsigned char>& private_key,
+                              boost::system::error_code& ec);
 
         const boost::asio::ip::tcp::socket& lowest_layer() const;
         boost::asio::ip::tcp::socket& lowest_layer();
@@ -170,7 +173,7 @@ namespace asio {
 
         xtt::identity requested_client_id_;
         xtt::group_identity claimed_group_id_;
-        const server_certificate_map& cert_map_;
+        server_certificate_map cert_map_;
         server_certificate_map::const_iterator cert_;
         server_cookie_context& cookie_ctx_;
 

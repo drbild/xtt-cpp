@@ -22,7 +22,6 @@ using namespace xtt;
 using namespace asio;
 
 server_context::server_context(boost::asio::ip::tcp::socket tcp_socket,
-                               const server_certificate_map& cert_map,
                                server_cookie_context& cookie_ctx)
     : in_buffer_(),
       out_buffer_(),
@@ -30,10 +29,31 @@ server_context::server_context(boost::asio::ip::tcp::socket tcp_socket,
       handshake_ctx_(in_buffer_.data(), in_buffer_.size(), out_buffer_.data(), out_buffer_.size()),
       socket_(std::move(tcp_socket)),
       strand_(socket_.get_io_service()),
-      cert_map_(cert_map),
+      cert_map_(),
       cert_(cert_map_.end()),
       cookie_ctx_(cookie_ctx)
 {
+}
+
+void server_context::load_certificate(const std::vector<unsigned char>& certificate,
+                                      const std::vector<unsigned char>& private_key,
+                                      boost::system::error_code& ec)
+{
+    // TODO: Figure out a way to determine type(Ed25519 vs. ...) from serialized values
+
+    auto cert = xtt::server_certificate_context_ed25519::from_certificate_and_key(certificate, private_key);
+    if (!cert) {
+        ec = boost::system::error_code(static_cast<int>(return_code::BAD_CERTIFICATE),
+                                                        get_xtt_category());
+        return;
+    }
+
+    cert_map_[suite_spec::X25519_LRSW_ED25519_CHACHA20POLY1305_SHA512] = cert->clone();
+    cert_map_[suite_spec::X25519_LRSW_ED25519_CHACHA20POLY1305_BLAKE2B] = cert->clone();
+    cert_map_[suite_spec::X25519_LRSW_ED25519_AES256GCM_SHA512] = cert->clone();
+    cert_map_[suite_spec::X25519_LRSW_ED25519_AES256GCM_BLAKE2B] = cert->clone();
+
+    ec = boost::system::error_code();
 }
 
 const boost::asio::ip::tcp::socket& 

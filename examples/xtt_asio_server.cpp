@@ -37,11 +37,13 @@ class xtt_server {
 public:
     xtt_server(boost::asio::io_context& io_context,
                short port,
-               xtt::asio::server_certificate_map& cert_map,
+               const std::vector<unsigned char>& certificate,
+               const std::vector<unsigned char>& private_key,
                xtt::server_cookie_context& cookie_ctx,
                std::unordered_map<xtt::group_identity, std::unique_ptr<xtt::group_public_key_context>>& gpk_map)
         : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-          cert_map_(cert_map),
+          certificate_(certificate),
+          private_key_(private_key),
           cookie_ctx_(cookie_ctx),
           gpk_map_(gpk_map),
           xtt_contexts_(),
@@ -65,9 +67,16 @@ private:
 
     void run_handshake(boost::asio::ip::tcp::socket socket)
     {
-        xtt_contexts_.emplace_back(std::move(socket), cert_map_, cookie_ctx_);
-
+        xtt_contexts_.emplace_back(std::move(socket), cookie_ctx_);
         xtt::asio::server_context& xtt_context = xtt_contexts_.back();
+
+        boost::system::error_code cert_ec;
+        xtt_context.load_certificate(certificate_, private_key_, cert_ec);
+        if (cert_ec) {
+            std::cerr << "Error deserializing certificate\n";
+            return;
+        }
+
         xtt_context.async_handle_connect([this](xtt::group_identity claimed_gid,
                                                 xtt::identity requested_client_id,
                                                 auto&& continuation)
@@ -203,7 +212,9 @@ private:
 private:
     boost::asio::ip::tcp::acceptor acceptor_;
 
-    xtt::asio::server_certificate_map& cert_map_;
+    std::vector<unsigned char> certificate_;
+    std::vector<unsigned char> private_key_;
+
     xtt::server_cookie_context& cookie_ctx_;
     std::unordered_map<xtt::group_identity, std::unique_ptr<xtt::group_public_key_context>>& gpk_map_;
 
@@ -214,7 +225,8 @@ private:
 
 void parse_cmd_args(int argc, char *argv[], short *port);
 
-int initialize(xtt::asio::server_certificate_map& cert_map,
+int initialize(std::vector<unsigned char>& certificate,
+               std::vector<unsigned char>& private_key,
                std::unordered_map<xtt::group_identity, std::unique_ptr<xtt::group_public_key_context>>& gpk_map);
 
 int main(int argc, char *argv[])
@@ -224,11 +236,12 @@ int main(int argc, char *argv[])
     parse_cmd_args(argc, argv, &server_port);
 
     // 2) Setup necessary XTT information (used by all handshakes)
-    xtt::asio::server_certificate_map cert_map;
+    std::vector<unsigned char> certificate;
+    std::vector<unsigned char> private_key;
     xtt::server_cookie_context cookie_ctx;
     std::unordered_map<xtt::group_identity, std::unique_ptr<xtt::group_public_key_context>> gpk_map;
     int ret;
-    ret = initialize(cert_map, gpk_map);
+    ret = initialize(certificate, private_key, gpk_map);
     if (0 != ret) {
         std::cerr << "Error initializing persistent XTT contexts\n";
         return 1;
@@ -236,7 +249,7 @@ int main(int argc, char *argv[])
 
     // 3) Start server
     boost::asio::io_context io_context;
-    xtt_server serv{io_context, server_port, cert_map, cookie_ctx, gpk_map};
+    xtt_server serv{io_context, server_port, certificate, private_key, cookie_ctx, gpk_map};
 
     // 4) Run event loop
     io_context.run();
@@ -252,7 +265,8 @@ void parse_cmd_args(int argc, char *argv[], short *port)
     *port = std::atoi(argv[1]);
 }
 
-int initialize(xtt::asio::server_certificate_map& cert_map,
+int initialize(std::vector<unsigned char>& certificate,
+               std::vector<unsigned char>& private_key,
                std::unordered_map<xtt::group_identity, std::unique_ptr<xtt::group_public_key_context>>& gpk_map)
 {
     // 1) Read DAA GPK from file.
@@ -290,27 +304,11 @@ int initialize(xtt::asio::server_certificate_map& cert_map,
 
     // 5) Read in my certificate from file
     std::ifstream cert_file(server_certificate_file, std::ios::in | std::ios::binary);
-    std::vector<unsigned char> serialized_cert((std::istreambuf_iterator<char>(cert_file)), std::istreambuf_iterator<char>());
+    certificate.assign((std::istreambuf_iterator<char>(cert_file)), std::istreambuf_iterator<char>());
 
     // 6) Read in my private key from file
     std::ifstream privkey_file(server_privatekey_file, std::ios::in | std::ios::binary);
-    std::vector<unsigned char> serialized_privkey((std::istreambuf_iterator<char>(privkey_file)), std::istreambuf_iterator<char>());
-
-    // 7) Initialize my certificate context
-    // Currently, only Ed25519 is supported for server signatures,
-    // but in the future others may be used, too.
-    auto cert = xtt::server_certificate_context_ed25519::from_certificate_and_key(serialized_cert, serialized_privkey);
-    if (!cert) {
-        std::cerr << "Error deserializing server's certificate and private key\n";
-        return -1;
-    }
-
-    cert_map[xtt::suite_spec::X25519_LRSW_ED25519_CHACHA20POLY1305_SHA512] = cert->clone();
-    cert_map[xtt::suite_spec::X25519_LRSW_ED25519_CHACHA20POLY1305_BLAKE2B] = cert->clone();
-    cert_map[xtt::suite_spec::X25519_LRSW_ED25519_AES256GCM_SHA512] = cert->clone();
-    cert_map[xtt::suite_spec::X25519_LRSW_ED25519_AES256GCM_BLAKE2B] = cert->clone();
-
-    std::cout << "Using server certificate: " << cert->get_certificate_as_text() << std::endl;
+    private_key.assign((std::istreambuf_iterator<char>(privkey_file)), std::istreambuf_iterator<char>());
 
     return 0;
 }
