@@ -283,65 +283,61 @@ namespace asio {
                                             AssignIdCallback async_assign_id,
                                             Handler handler)
     {
-        boost::asio::post(strand_,
-                          [this, current_rc, async_lookup_gpk, async_assign_id, handler]()
-                          {
-                              switch (current_rc) {
-                                  case return_code::WANT_WRITE:
-                                      async_do_write(async_lookup_gpk, async_assign_id, handler);
+        switch (current_rc) {
+            case return_code::WANT_WRITE:
+                async_do_write(async_lookup_gpk, async_assign_id, handler);
 
-                                      break;
-                                  case return_code::WANT_READ:
-                                      async_do_read(async_lookup_gpk, async_assign_id, handler);
+                break;
+            case return_code::WANT_READ:
+                async_do_read(async_lookup_gpk, async_assign_id, handler);
 
-                                      break;
-                                  case return_code::WANT_BUILDSERVERATTEST:
-                                      async_buildserverattest(async_lookup_gpk, async_assign_id, handler);
+                break;
+            case return_code::WANT_BUILDSERVERATTEST:
+                async_buildserverattest(async_lookup_gpk, async_assign_id, handler);
 
-                                      break;
-                                  case return_code::WANT_PREPARSEIDCLIENTATTEST:
-                                      async_preparseidclientattest(async_lookup_gpk, async_assign_id, handler);
+                break;
+            case return_code::WANT_PREPARSEIDCLIENTATTEST:
+                async_preparseidclientattest(async_lookup_gpk, async_assign_id, handler);
 
-                                      break;
-                                  case return_code::WANT_VERIFYGROUPSIGNATURE:
-                                      async_verifygroupsignature(async_lookup_gpk, async_assign_id, handler);
+                break;
+            case return_code::WANT_VERIFYGROUPSIGNATURE:
+                async_verifygroupsignature(async_lookup_gpk, async_assign_id, handler);
 
-                                      break;
-                                  case return_code::WANT_BUILDIDSERVERFINISHED:
-                                      async_buildidserverfinished(async_lookup_gpk, async_assign_id, handler);
+                break;
+            case return_code::WANT_BUILDIDSERVERFINISHED:
+                async_buildidserverfinished(async_lookup_gpk, async_assign_id, handler);
 
-                                      break;
-                                  case return_code::HANDSHAKE_FINISHED:
-                                      this->ec_ = boost::system::error_code();
+                break;
+            case return_code::HANDSHAKE_FINISHED:
+                this->ec_ = boost::system::error_code();
 
-                                      boost::asio::post(strand_,
-                                                        [this, handler]()
-                                                        {
-                                                            handler(this->ec_);
-                                                        });
+                boost::asio::post(strand_,
+                                  [this, handler]()
+                                  {
+                                      handler(this->ec_);
+                                  });
 
-                                      break;
-                                  case return_code::RECEIVED_ERROR_MSG:
-                                      this->ec_ = boost::system::error_code(static_cast<int>(return_code::RECEIVED_ERROR_MSG),
-                                                                            get_xtt_category());
+                break;
+            case return_code::RECEIVED_ERROR_MSG:
+                this->ec_ = boost::system::error_code(static_cast<int>(return_code::RECEIVED_ERROR_MSG),
+                                                      get_xtt_category());
 
-                                      boost::asio::post(strand_,
-                                                        [this, handler]()
-                                                        {
-                                                            handler(this->ec_);
-                                                        });
-                                      break;
-                                  default:
-                                      this->ec_ = boost::system::error_code(static_cast<int>(current_rc),
-                                                                            get_xtt_category());
+                boost::asio::post(strand_,
+                                  [this, handler]()
+                                  {
+                                      handler(this->ec_);
+                                  });
+                break;
+            default:
+                this->ec_ = boost::system::error_code(static_cast<int>(current_rc),
+                                                      get_xtt_category());
 
-                                      async_send_error_msg([this, handler, current_rc]()
-                                                           {
-                                                               handler(this->ec_);
-                                                           });
-                                      return;
-                              }
-                          });
+                async_send_error_msg([this, handler, current_rc]()
+                                     {
+                                         handler(this->ec_);
+                                     });
+                return;
+        }
     }
 
     template <typename GPKLookupCallback,
