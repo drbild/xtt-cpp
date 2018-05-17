@@ -89,8 +89,8 @@ endif()
 ################################################################################
 # Headers
 ################################################################################
-install(FILES include/xtt/cpp.hpp DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-install(DIRECTORY include/xtt/cpp DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES include/xtt.hpp DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(DIRECTORY include/xtt DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 ################################################################################
 # pkgconfig
